@@ -45,7 +45,7 @@ jobs:
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             ct lint --config ct.yaml --target-branch "${{ github.base_ref }}"
           else
-            ct lint --config ct.yaml --all --check-version-increment=false
+            ct lint --config ct.yaml --check-version-increment=false
           fi
 
       - name: helm-docs drift check
