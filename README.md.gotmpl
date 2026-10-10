@@ -1,0 +1,251 @@
+{{ template "chart.header" . }}
+
+{{ template "chart.deprecationWarning" . }}
+
+{{ template "chart.badgesSection" . }}
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/teslamate-helm-chart)](https://artifacthub.io/packages/search?repo=teslamate-helm-chart)
+[![Lint and test](https://github.com/dcardozoo/teslamate-helm-chart/actions/workflows/lint-test.yaml/badge.svg)](https://github.com/dcardozoo/teslamate-helm-chart/actions/workflows/lint-test.yaml)
+
+{{ template "chart.description" . }}
+
+> This chart is an independent community project and is not affiliated with Tesla, Inc. or the TeslaMate project.
+
+{{ template "chart.homepageLine" . }}
+
+## Overview
+
+This chart deploys [TeslaMate](https://github.com/teslamate-org/teslamate) (a self-hosted Tesla data logger) with:
+
+- TeslaMate (single replica, `Recreate` strategy)
+- Grafana with the TeslaMate dashboards preinstalled (`teslamate/grafana` image)
+- Eclipse Mosquitto as MQTT broker
+- a highly available PostgreSQL `Cluster` managed by [CloudNativePG](https://cloudnative-pg.io) (CNPG), with optional scheduled backups through the [Barman Cloud plugin](https://cloudnative-pg.io/plugin-barman-cloud/)
+
+By default the database uses the **CNPG operator** (and, for backups, the **Barman Cloud plugin**). This chart does **not** install either of them, see [Prerequisites](#prerequisites). Every component is optional, so you can also use an existing PostgreSQL server or MQTT broker.
+
+```mermaid
+flowchart LR
+  user([Browser]) --> proxy[Authenticating reverse proxy / Ingress]
+  proxy --> tm[TeslaMate]
+  proxy --> gf[Grafana]
+  tm -- MQTT --> mq[Mosquitto]
+  tm -- "SSL, verified CA" --> db[("CNPG Cluster<br/>primary + replica")]
+  gf -- "sslmode=require" --> db
+  db -. "WAL + base backups (optional)" .-> s3[(S3 / Azure / GCS)]
+  op["CNPG operator + Barman Cloud plugin<br/>(installed separately)"] -. manages .-> db
+```
+
+## Prerequisites
+
+- Kubernetes >= 1.29
+- Helm >= 3.14 (Helm 4 works)
+- A default StorageClass (or set `storageClass` per component)
+- With `database.type: cnpg` (default): the [CloudNativePG operator](https://cloudnative-pg.io/docs/current/installation_upgrade/), installed once per cluster
+- For backups only: the [Barman Cloud plugin](https://cloudnative-pg.io/plugin-barman-cloud/docs/installation/), installed in the operator's namespace (it requires cert-manager)
+
+Example installation of the operator with its official Helm chart:
+
+```sh
+helm repo add cnpg https://cloudnative-pg.github.io/charts
+helm upgrade --install cnpg cnpg/cloudnative-pg -n cnpg-system --create-namespace --wait
+```
+
+Follow the linked documentation for the plugin and for production setups.
+
+## Quick start
+
+```sh
+helm install teslamate oci://ghcr.io/dcardozoo/charts/teslamate \
+  -n teslamate --create-namespace \
+  --set teslamate.encryptionKey=$(openssl rand -base64 32) \
+  --wait
+```
+
+`teslamate.encryptionKey` (or `teslamate.existingSecret`) is **required**; the install fails without it. The key encrypts your Tesla API tokens in the database. Store it somewhere safe: if it is lost or changed, the stored tokens become unreadable and you have to sign in to Tesla again. For repeatable installs, put the key in a Secret and use `teslamate.existingSecret` (key name `ENCRYPTION_KEY`, configurable via `teslamate.existingSecretKey`).
+
+On the first install the pods stay in `CreateContainerConfigError` for 1-2 minutes until CNPG has created its secrets. This is expected.
+
+Then open the UIs (no Ingress by default):
+
+```sh
+kubectl -n teslamate port-forward svc/teslamate 4000:4000
+kubectl -n teslamate port-forward svc/teslamate-grafana 3000:3000
+```
+
+Resource names use `<fullname>`, which is the release name (`<release>-teslamate` when the release name does not contain "teslamate"). The examples assume a release named `teslamate`.
+
+Grafana starts with `admin` / `admin` and asks for a new password on first login, unless you set `grafana.existingAdminSecret` (a Secret with keys `admin-user` and `admin-password`).
+
+Verify the installation:
+
+```sh
+helm test teslamate -n teslamate --logs
+```
+
+## Configuration scenarios
+
+Pass these with `-f values.yaml`. Each one also needs `teslamate.encryptionKey` or `teslamate.existingSecret`.
+
+### Full stack (default)
+
+TeslaMate, Grafana, Mosquitto and a 2-instance PostgreSQL 18 CNPG cluster. No values needed besides the key.
+
+### TeslaMate and database only
+
+```yaml
+teslamate:
+  mqtt:
+    enabled: false
+grafana:
+  enabled: false
+mosquitto:
+  enabled: false
+```
+
+### External PostgreSQL
+
+The database user needs the privileges TeslaMate's migrations require, see [docs/database.md](docs/database.md). The chart does not manage SUPERUSER for external databases.
+
+```yaml
+database:
+  type: external
+  external:
+    host: postgres.example.com
+    port: 5432
+    database: teslamate
+    username: teslamate
+    existingSecret: teslamate-db      # key "password" by default
+    ssl: "true"                       # false | true | noverify
+```
+
+No CNPG operator is needed in this case.
+
+### External MQTT broker
+
+```yaml
+mosquitto:
+  enabled: false
+teslamate:
+  mqtt:
+    host: mqtt.example.com
+    port: 1883
+    existingSecret: mqtt-credentials   # keys: username, password
+    tls: false
+```
+
+### Ingress
+
+```yaml
+teslamate:
+  ingress:
+    enabled: true
+    className: nginx
+    hosts:
+      - host: teslamate.example.com
+        paths: [{path: /, pathType: Prefix}]
+```
+
+TeslaMate has no authentication. See [Security](#security).
+
+With an Ingress (or `teslamate.virtualHost`), the chart sets `VIRTUAL_HOST` to that host and `CHECK_ORIGIN=true`, so TeslaMate's websocket only accepts connections from that origin. Accessing the UI under another name, e.g. through `kubectl port-forward`, then fails with a constantly reconnecting page. Allow extra origins with `teslamate.checkOrigin: "https://teslamate.example.com,//localhost:4000"`, or disable the check with `"false"`. See the [TeslaMate environment variables](https://docs.teslamate.org/docs/configuration/environment_variables).
+
+## Database and SUPERUSER
+
+**The TeslaMate database owner (`teslamate`) is a PostgreSQL SUPERUSER.** TeslaMate's migrations need it: they create the `earthdistance` extension, which PostgreSQL does not allow for regular users, and future migrations may need more. The upstream docker-compose setup does the same (`POSTGRES_USER=teslamate` makes it the superuser). The chart declares the role through CNPG `managed.roles`.
+
+**Because of this, use this database only for TeslaMate. Do not host other applications' databases in it.**
+
+Because Grafana editors can run arbitrary SQL through the datasource, also set `grafana.readOnlyUser`: a dedicated role with `pg_read_all_data` that Grafana uses instead of the owner. Create a `kubernetes.io/basic-auth` Secret first:
+
+```sh
+kubectl -n teslamate create secret generic grafana-db --type=kubernetes.io/basic-auth \
+  --from-literal=username=grafana --from-literal=password=$(openssl rand -base64 24)
+```
+
+```yaml
+grafana:
+  readOnlyUser:
+    enabled: true
+    existingSecret: grafana-db
+```
+
+TeslaMate connects with `DATABASE_SSL=true` and verifies the CNPG CA; Grafana uses `sslmode=require`. The default cluster has 2 instances (the schema enforces a minimum of 2), PostgreSQL 18, data checksums and preferred pod anti-affinity. Details: [docs/database.md](docs/database.md).
+
+## Backups
+
+**Backups and restores are your responsibility.** The chart can configure WAL archiving and scheduled base backups through the Barman Cloud plugin, but it neither installs the plugin nor tests or manages the backup and restore process.
+
+```yaml
+database:
+  cnpg:
+    backup:
+      enabled: true
+      schedule: "0 0 3 * * *"     # six fields, seconds first
+      retentionPolicy: 30d
+      objectStore:
+        destinationPath: s3://my-bucket/teslamate/
+        s3Credentials:
+          accessKeyId: {name: s3-credentials, key: ACCESS_KEY_ID}
+          secretAccessKey: {name: s3-credentials, key: ACCESS_SECRET_KEY}
+```
+
+How scheduled backups and restores work, with links to the official documentation: [docs/backups.md](docs/backups.md).
+
+## Security
+
+Defaults: non-root, read-only root filesystem for TeslaMate and Mosquitto, `seccompProfile: RuntimeDefault`, all capabilities dropped, `automountServiceAccountToken: false` on all application pods.
+
+- TeslaMate has no authentication. Put it behind an authenticating reverse proxy (oauth2-proxy, Authentik, basic auth) before exposing it through an Ingress.
+- Mosquitto allows anonymous clients and is only reachable inside the cluster (ClusterIP) by default. Supply your own `mosquitto.config` before exposing it.
+- Grafana uses `admin`/`admin` unless `grafana.existingAdminSecret` is set.
+- The database owner is a SUPERUSER, see [Database and SUPERUSER](#database-and-superuser).
+
+## Documentation
+
+- [docs/database.md](docs/database.md): CNPG cluster, SUPERUSER, read-only role, uninstall behavior
+- [docs/backups.md](docs/backups.md): how scheduled backups and restores work
+- [docs/upgrading.md](docs/upgrading.md): TeslaMate, PostgreSQL and chart upgrades, migration from docker-compose
+- [docs/troubleshooting.md](docs/troubleshooting.md)
+- [CONTRIBUTING.md](CONTRIBUTING.md): development and testing
+
+## Testing
+
+```sh
+helm unittest .                         # unit tests
+helm test <release> -n <namespace>      # database, grafana, mosquitto and teslamate checks
+scripts/e2e.sh ci/default-values.yaml   # install + helm test + uninstall on the current kube-context (kind)
+```
+
+`helm test` runs pods that check the database (TLS, extensions, migrations, owner is SUPERUSER, read-only role), Grafana health, a Mosquitto publish and the TeslaMate HTTP endpoint. `scripts/e2e.sh` takes any `ci/*-values.yaml` (scenarios: default, readonly-grafana, minimal) and needs the CNPG operator installed in the cluster. Neither the operator, the Barman Cloud plugin nor backups and restores are tested by this chart.
+
+## Uninstall
+
+```sh
+helm uninstall teslamate -n teslamate
+```
+
+- With `database.cnpg.keepOnUninstall: true` (default) the CNPG Cluster (and its ObjectStore, if backups are enabled) carries `helm.sh/resource-policy: keep`: the database and its PVCs survive the uninstall. Reinstalling the same release name in the same namespace adopts them again. Delete them manually when you no longer need the data:
+  ```sh
+  kubectl -n teslamate delete clusters.postgresql.cnpg.io,objectstores.barmancloud.cnpg.io --all
+  ```
+- With `keepOnUninstall: false`, `helm uninstall` deletes the Cluster and CNPG deletes its PVCs. **This deletes your data.**
+- Backup data in your object store is never touched.
+- The release-managed PVCs (TeslaMate import, Grafana, Mosquitto) are deleted with the release.
+
+## Disclaimer
+
+This chart is an independent community project and is not affiliated with Tesla, Inc. or the TeslaMate project.
+
+
+{{ template "chart.sourcesSection" . }}
+
+{{ template "chart.requirementsSection" . }}
+
+{{ template "chart.valuesSection" . }}
+
+## License
+
+Apache-2.0, see [LICENSE](LICENSE) and [NOTICE](NOTICE).
+
+{{ template "helm-docs.versionFooter" . }}

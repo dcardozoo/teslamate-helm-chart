@@ -1,0 +1,109 @@
+name: Lint and test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  HELM_DOCS_VERSION: 1.14.2
+  KUBECONFORM_VERSION: 0.8.0
+  HELM_UNITTEST_VERSION: v1.2.1
+  # renovate: datasource=helm depName=cloudnative-pg registryUrl=https://cloudnative-pg.github.io/charts
+  CNPG_CHART_VERSION: 0.29.1
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+
+      - uses: helm/chart-testing-action@720270857a28afd41e2426521a7801db09e9b510 # v2.9.0
+
+      - name: helm lint
+        run: helm lint . --strict --set teslamate.encryptionKey=x
+
+      - name: Install helm-unittest
+        run: helm plugin install https://github.com/helm-unittest/helm-unittest --version "$HELM_UNITTEST_VERSION" --verify=false
+
+      - name: helm unittest
+        run: helm unittest .
+
+      - name: ct lint
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            ct lint --config ct.yaml --target-branch "${{ github.base_ref }}"
+          else
+            ct lint --config ct.yaml --all --check-version-increment=false
+          fi
+
+      - name: helm-docs drift check
+        run: |
+          curl -fsSL "https://github.com/norwoodj/helm-docs/releases/download/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.tar.gz" | tar -xz helm-docs
+          ./helm-docs --chart-search-root=.
+          rm helm-docs
+          git diff --exit-code -- README.md || { echo "README.md is out of date; run helm-docs and commit the result"; exit 1; }
+
+      - name: kubeconform
+        run: |
+          curl -fsSL "https://github.com/yannh/kubeconform/releases/download/v${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" | tar -xz kubeconform
+          kube_version="$(sed -n 's/^kubeVersion:.*[>=]=*\([0-9][0-9.]*\).*/\1/p' Chart.yaml)"
+          kube_version="${kube_version:-1.29.0}"
+          files=("")
+          for f in ci/*-values.yaml; do [ -e "$f" ] && files+=("$f"); done
+          for f in "${files[@]}"; do
+            echo "::group::kubeconform ${f:-default values}"
+            helm template teslamate . --namespace teslamate --kube-version "$kube_version" \
+              --set teslamate.encryptionKey=x ${f:+-f "$f"} \
+              | ./kubeconform -strict -summary -ignore-missing-schemas \
+                  -kubernetes-version "$kube_version" \
+                  -schema-location default \
+                  -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+            echo "::endgroup::"
+          done
+
+  e2e:
+    needs: lint
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        k8s: [v1.36.4, v1.37.0]
+        scenario: [default, readonly-grafana, minimal]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+
+      - uses: helm/kind-action@1544676c07bb3570fcb70166beaa07c4528fd4aa # v1.15.1
+        with:
+          node_image: kindest/node:${{ matrix.k8s }}
+          cluster_name: e2e
+
+      - name: Install CloudNativePG operator (test prerequisite)
+        run: |
+          helm install cnpg cloudnative-pg --repo https://cloudnative-pg.github.io/charts \
+            --version "$CNPG_CHART_VERSION" -n cnpg-system --create-namespace --wait --timeout 5m
+
+      - name: e2e (${{ matrix.scenario }})
+        env:
+          SCENARIO: ${{ matrix.scenario }}
+        run: scripts/e2e.sh "ci/${SCENARIO}-values.yaml"
+
+      - name: Dump cluster state on failure
+        if: failure()
+        run: |
+          kubectl get all,cluster.postgresql.cnpg.io,pvc -A || true
+          kubectl -n teslamate describe pods || true
+          kubectl -n teslamate get events --sort-by=.lastTimestamp || true

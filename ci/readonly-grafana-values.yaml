@@ -1,0 +1,14 @@
+# Grafana connects with a dedicated read-only role; 3 instances and Mosquitto persistence.
+teslamate:
+  encryptionKey: e2e-only-not-secret
+  timezone: Europe/Berlin
+grafana:
+  readOnlyUser:
+    enabled: true
+    existingSecret: e2e-grafana-readonly
+database:
+  cnpg:
+    instances: 3
+mosquitto:
+  persistence:
+    enabled: true

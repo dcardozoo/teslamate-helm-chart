@@ -1,0 +1,51 @@
+name: Bug report
+description: Something in the chart does not work as expected
+labels: [bug]
+body:
+  - type: input
+    id: chart-version
+    attributes:
+      label: Chart version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: k8s-version
+    attributes:
+      label: Kubernetes version and distribution
+      placeholder: "v1.34, k3s"
+    validations:
+      required: true
+  - type: input
+    id: helm-version
+    attributes:
+      label: Helm version
+      placeholder: "v3.18.0"
+    validations:
+      required: true
+  - type: textarea
+    id: values
+    attributes:
+      label: Values used
+      description: Relevant values. Remove secrets such as the encryption key and passwords.
+      render: yaml
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and events
+      description: Output of `kubectl describe` / `kubectl logs` for the affected pods. Remove secrets.
+      render: shell

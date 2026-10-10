@@ -1,0 +1,8 @@
+# A chart at the repository root is addressed with `charts: [.]`
+# (chart-dirs is only for directories that contain charts).
+charts:
+  - .
+target-branch: main
+validate-maintainers: false
+check-version-increment: true
+helm-extra-args: --timeout 300s

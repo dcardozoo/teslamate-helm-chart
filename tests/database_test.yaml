@@ -1,0 +1,67 @@
+suite: cnpg database
+templates:
+  - templates/database/cluster.yaml
+release:
+  name: tm
+  namespace: cars
+set:
+  teslamate.encryptionKey: x
+tests:
+  - it: renders a Cluster with sane defaults
+    asserts:
+      - hasDocuments: {count: 1}
+      - isKind: {of: Cluster}
+      - equal: {path: metadata.name, value: tm-teslamate-db}
+      - equal: {path: spec.instances, value: 2}
+      - notExists: {path: spec.enableSuperuserAccess}
+      - equal: {path: spec.managed.roles, value: [{name: teslamate, ensure: present, login: true, superuser: true}]}
+      - equal: {path: spec.bootstrap.initdb, value: {database: teslamate, owner: teslamate, dataChecksums: true}}
+      - equal: {path: spec.affinity.enablePodAntiAffinity, value: true}
+      - notExists: {path: spec.plugins}
+  - it: keeps the Cluster on uninstall by default
+    asserts:
+      - equal: {path: 'metadata.annotations["helm.sh/resource-policy"]', value: keep}
+  - it: lets helm uninstall delete the Cluster when asked
+    set:
+      database.cnpg.keepOnUninstall: false
+    asserts:
+      - notExists: {path: metadata.annotations}
+  - it: creates the Grafana read-only role
+    set:
+      grafana.readOnlyUser.enabled: true
+      grafana.readOnlyUser.existingSecret: gf-ro
+    asserts:
+      - contains:
+          path: spec.managed.roles
+          content:
+            name: grafana
+            ensure: present
+            login: true
+            inRoles: [pg_read_all_data]
+            passwordSecret: {name: gf-ro}
+  - it: merges extraSpec and storage settings
+    set:
+      database.cnpg.storage.storageClass: fast
+      database.cnpg.walStorage.enabled: true
+      database.cnpg.parameters.max_connections: "50"
+      database.cnpg.extraSpec:
+        primaryUpdateStrategy: supervised
+    asserts:
+      - equal: {path: spec.storage, value: {size: 5Gi, storageClass: fast}}
+      - equal: {path: spec.walStorage, value: {size: 2Gi}}
+      - equal: {path: spec.postgresql.parameters.max_connections, value: "50"}
+      - equal: {path: spec.primaryUpdateStrategy, value: supervised}
+  - it: replaces the default initdb with a bootstrap from extraSpec
+    set:
+      database.cnpg.extraSpec:
+        bootstrap:
+          recovery: {source: origin}
+    asserts:
+      - equal: {path: spec.bootstrap, value: {recovery: {source: origin}}}
+  - it: renders nothing for external databases
+    set:
+      database.type: external
+      database.external.host: pg
+      database.external.existingSecret: pg
+    asserts:
+      - hasDocuments: {count: 0}

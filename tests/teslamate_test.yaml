@@ -1,0 +1,173 @@
+suite: teslamate
+templates:
+  - templates/teslamate/deployment.yaml
+  - templates/teslamate/secret.yaml
+  - templates/teslamate/pvc.yaml
+  - templates/teslamate/ingress.yaml
+  - templates/teslamate/service.yaml
+release:
+  name: tm
+  namespace: cars
+set:
+  teslamate.encryptionKey: s3cr3t
+tests:
+  - it: runs a single replica with Recreate strategy
+    template: templates/teslamate/deployment.yaml
+    asserts:
+      - equal: {path: spec.replicas, value: 1}
+      - equal: {path: spec.strategy.type, value: Recreate}
+      - equal: {path: 'spec.template.spec.containers[0].image', value: "teslamate/teslamate:4.3.0"}
+      - notExists: {path: spec.template.spec.initContainers}
+  - it: connects to the CNPG cluster over verified TLS
+    template: templates/teslamate/deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: DATABASE_HOST, value: tm-teslamate-db-rw}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: DATABASE_SSL, value: "true"}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_PASS
+            valueFrom: {secretKeyRef: {name: tm-teslamate-db-app, key: password}}
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: db-ca
+            secret: {secretName: tm-teslamate-db-ca, items: [{key: ca.crt, path: ca.crt}]}
+  - it: uses an external database
+    template: templates/teslamate/deployment.yaml
+    set:
+      database.type: external
+      database.external.host: pg.example.com
+      database.external.port: 6432
+      database.external.existingSecret: pg-auth
+      database.external.existingSecretPasswordKey: pass
+      database.external.ssl: noverify
+    asserts:
+      - notExists: {path: spec.template.spec.initContainers}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: DATABASE_HOST, value: pg.example.com}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: DATABASE_PORT, value: "6432"}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: DATABASE_SSL, value: noverify}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_PASS
+            valueFrom: {secretKeyRef: {name: pg-auth, key: pass}}
+      - notContains:
+          path: spec.template.spec.volumes
+          content: {name: db-ca}
+          any: true
+  - it: points MQTT at the bundled broker by default
+    template: templates/teslamate/deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: MQTT_HOST, value: tm-teslamate-mosquitto}
+  - it: disables MQTT
+    template: templates/teslamate/deployment.yaml
+    set:
+      teslamate.mqtt.enabled: false
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: DISABLE_MQTT, value: "true"}
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content: {name: MQTT_HOST}
+          any: true
+  - it: requires an MQTT host when the bundled broker is disabled
+    template: templates/teslamate/deployment.yaml
+    set:
+      mosquitto.enabled: false
+    asserts:
+      - failedTemplate:
+          errorPattern: "teslamate.mqtt.host is required"
+  - it: uses an external authenticated MQTT broker
+    template: templates/teslamate/deployment.yaml
+    set:
+      mosquitto.enabled: false
+      teslamate.mqtt.host: mqtt.example.com
+      teslamate.mqtt.existingSecret: mqtt-auth
+      teslamate.mqtt.tls: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: MQTT_HOST, value: mqtt.example.com}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: MQTT_PASSWORD
+            valueFrom: {secretKeyRef: {name: mqtt-auth, key: password}}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: MQTT_TLS, value: "true"}
+  - it: renders the encryption key secret
+    template: templates/teslamate/secret.yaml
+    asserts:
+      - equal: {path: data.ENCRYPTION_KEY, value: czNjcjN0}
+  - it: skips the secret when an existing one is used
+    template: templates/teslamate/secret.yaml
+    set:
+      teslamate.encryptionKey: ""
+      teslamate.existingSecret: mine
+    asserts:
+      - hasDocuments: {count: 0}
+  - it: mounts an import volume
+    set:
+      teslamate.import.enabled: true
+    asserts:
+      - template: templates/teslamate/pvc.yaml
+        equal: {path: metadata.name, value: tm-teslamate-import}
+      - template: templates/teslamate/deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: IMPORT_DIR, value: /opt/app/import}
+  - it: derives VIRTUAL_HOST from the ingress
+    set:
+      teslamate.ingress.enabled: true
+      teslamate.ingress.hosts:
+        - host: tm.example.org
+          paths:
+            - path: /
+              pathType: Prefix
+    asserts:
+      - template: templates/teslamate/deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: VIRTUAL_HOST, value: tm.example.org}
+      - template: templates/teslamate/ingress.yaml
+        equal: {path: "spec.rules[0].http.paths[0].backend.service.name", value: tm-teslamate}
+      - template: templates/teslamate/deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: CHECK_ORIGIN, value: "true"}
+  - it: leaves CHECK_ORIGIN unset without a virtual host
+    template: templates/teslamate/deployment.yaml
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content: {name: CHECK_ORIGIN}
+          any: true
+  - it: lets users override CHECK_ORIGIN
+    template: templates/teslamate/deployment.yaml
+    set:
+      teslamate.virtualHost: tm.example.org
+      teslamate.checkOrigin: "false"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: CHECK_ORIGIN, value: "false"}
+  - it: renders nothing when disabled
+    set:
+      teslamate.enabled: false
+    asserts:
+      - hasDocuments: {count: 0}

@@ -1,0 +1,58 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "semanticCommits": "enabled",
+  "helm-values": { "managerFilePatterns": ["/^values\\.yaml$/", "/^ci\\/.+-values\\.yaml$/"] },
+  "helmv3": { "enabled": true },
+  "github-actions": { "enabled": true },
+  "customManagers": [
+    {
+      "description": "Images in the artifacthub.io/images annotation of Chart.yaml",
+      "customType": "regex",
+      "managerFilePatterns": ["/^Chart\\.yaml$/"],
+      "matchStrings": ["image:\\s*(?<depName>[^\\s:]+):(?<currentValue>[^\\s]+)"],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    },
+    {
+      "description": "CNPG PostgreSQL imageName in values files",
+      "customType": "regex",
+      "managerFilePatterns": ["/^values\\.yaml$/", "/^ci\\/.+-values\\.yaml$/"],
+      "matchStrings": ["imageName:\\s*(?<depName>ghcr\\.io/cloudnative-pg/postgresql):(?<currentValue>[^\\s]+)"],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    },
+    {
+      "description": "Versions in workflows annotated with a renovate comment",
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.github\\/workflows\\/.+\\.ya?ml$/"],
+      "matchStrings": ["# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)( registryUrl=(?<registryUrl>\\S+))?\\s+\\w+: (?<currentValue>\\S+)"]
+    },
+    {
+      "description": "appVersion tracks the teslamate/teslamate image",
+      "customType": "regex",
+      "managerFilePatterns": ["/^Chart\\.yaml$/"],
+      "matchStrings": ["appVersion:\\s*\"?(?<currentValue>[^\"\\s]+)\"?"],
+      "depNameTemplate": "teslamate/teslamate",
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "TeslaMate and its Grafana image are released in lockstep",
+      "matchPackageNames": ["teslamate/teslamate", "teslamate/grafana"],
+      "groupName": "teslamate images"
+    },
+    {
+      "description": "PostgreSQL major upgrades are never automated",
+      "matchPackageNames": ["ghcr.io/cloudnative-pg/postgresql"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "pinDigests": true
+    }
+  ]
+}

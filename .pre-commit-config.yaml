@@ -1,0 +1,19 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(LICENSE|README\.md)$
+      - id: end-of-file-fixer
+        exclude: ^LICENSE$
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+        exclude: ^(templates/|tests/)
+      - id: check-merge-conflict
+      - id: check-added-large-files
+      - id: detect-private-key
+  - repo: https://github.com/norwoodj/helm-docs
+    rev: v1.14.2
+    hooks:
+      - id: helm-docs
+        args: [--chart-search-root=.]
