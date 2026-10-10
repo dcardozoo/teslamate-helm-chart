@@ -1,0 +1,26 @@
+suite: input validation
+templates:
+  - templates/validate.yaml
+tests:
+  - it: requires an encryption key
+    asserts:
+      - failedTemplate:
+          errorPattern: "Set teslamate.encryptionKey or teslamate.existingSecret"
+  - it: accepts an existing secret instead of an encryption key
+    set:
+      teslamate.existingSecret: my-key
+    asserts:
+      - notFailedTemplate: {}
+  - it: rejects a single-instance CNPG cluster (schema)
+    set:
+      teslamate.encryptionKey: x
+      database.cnpg.instances: 1
+    asserts:
+      - failedTemplate: {}
+  - it: requires a secret for the Grafana read-only role
+    set:
+      teslamate.encryptionKey: x
+      grafana.readOnlyUser.enabled: true
+    asserts:
+      - failedTemplate:
+          errorPattern: "grafana.readOnlyUser.existingSecret is required"

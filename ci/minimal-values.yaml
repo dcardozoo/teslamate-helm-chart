@@ -1,0 +1,9 @@
+# Only TeslaMate + database: no Grafana, no MQTT broker.
+teslamate:
+  encryptionKey: e2e-only-not-secret
+  mqtt:
+    enabled: false
+grafana:
+  enabled: false
+mosquitto:
+  enabled: false

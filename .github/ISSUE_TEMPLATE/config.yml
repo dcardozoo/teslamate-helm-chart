@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/dcardozoo/teslamate-helm-chart/security/advisories/new
+    about: Report security issues privately, not as a public issue.
+  - name: TeslaMate application issues
+    url: https://github.com/teslamate-org/teslamate/issues
+    about: Bugs in TeslaMate itself (not the chart) belong upstream.
+  - name: Questions and help
+    url: https://github.com/dcardozoo/teslamate-helm-chart/discussions
+    about: Ask usage questions in Discussions.

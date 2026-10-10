@@ -1,0 +1,3 @@
+# Chart defaults: 2-instance CNPG cluster, TeslaMate, Grafana, Mosquitto.
+teslamate:
+  encryptionKey: e2e-only-not-secret

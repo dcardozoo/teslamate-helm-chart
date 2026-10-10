@@ -1,0 +1,57 @@
+suite: grafana and mosquitto
+release:
+  name: tm
+  namespace: cars
+set:
+  teslamate.encryptionKey: x
+tests:
+  - it: gives Grafana the owner credentials and requires TLS by default
+    template: templates/grafana/deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: DATABASE_SSL_MODE, value: require}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: DATABASE_USER, value: teslamate}
+  - it: uses the read-only role for Grafana
+    template: templates/grafana/deployment.yaml
+    set:
+      grafana.readOnlyUser.enabled: true
+      grafana.readOnlyUser.existingSecret: gf-ro
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_USER
+            valueFrom: {secretKeyRef: {name: gf-ro, key: username}}
+  - it: disables Grafana DB TLS for external databases
+    template: templates/grafana/deployment.yaml
+    set:
+      database.type: external
+      database.external.host: pg
+      database.external.existingSecret: pg
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: DATABASE_SSL_MODE, value: disable}
+  - it: falls back to emptyDir without persistence
+    template: templates/grafana/deployment.yaml
+    set:
+      grafana.persistence.enabled: false
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content: {name: data, emptyDir: {}}
+  - it: enables Mosquitto persistence
+    template: templates/mosquitto/configmap.yaml
+    set:
+      mosquitto.persistence.enabled: true
+    asserts:
+      - matchRegex: {path: 'data["mosquitto.conf"]', pattern: "persistence_location /mosquitto/data/"}
+  - it: accepts a custom Mosquitto config
+    template: templates/mosquitto/configmap.yaml
+    set:
+      mosquitto.config: "listener 1883\nallow_anonymous false"
+    asserts:
+      - matchRegex: {path: 'data["mosquitto.conf"]', pattern: "allow_anonymous false"}
