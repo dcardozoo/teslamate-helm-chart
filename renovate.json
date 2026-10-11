@@ -48,7 +48,8 @@
     {
       "description": "helm-docs in CI and pre-commit must match, or the README drift check fails",
       "matchPackageNames": ["norwoodj/helm-docs"],
-      "groupName": "helm-docs"
+      "groupName": "helm-docs",
+      "allowedVersions": "/^v?\\d+\\.\\d+\\.\\d+$/"
     },
     {
       "description": "PostgreSQL major upgrades are never automated",
