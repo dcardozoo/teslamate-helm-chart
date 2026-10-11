@@ -1,6 +1,6 @@
 # teslamate
 
-![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 4.3.0](https://img.shields.io/badge/AppVersion-4.3.0-informational?style=flat-square)
+![Version: 0.1.1](https://img.shields.io/badge/Version-0.1.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 4.3.0](https://img.shields.io/badge/AppVersion-4.3.0-informational?style=flat-square)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 [![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/dcardozoo)](https://artifacthub.io/packages/search?repo=dcardozoo)
 [![Lint and test](https://github.com/dcardozoo/teslamate-helm-chart/actions/workflows/lint-test.yaml/badge.svg)](https://github.com/dcardozoo/teslamate-helm-chart/actions/workflows/lint-test.yaml)
@@ -9,7 +9,7 @@ TeslaMate data logger with Grafana dashboards, Mosquitto MQTT broker and a highl
 
 > This chart is an independent community project and is not affiliated with Tesla, Inc. or the TeslaMate project.
 
-**Homepage:** <https://github.com/teslamate-org/teslamate>
+**Homepage:** <https://github.com/dcardozoo/teslamate-helm-chart>
 
 ## Overview
 
@@ -249,6 +249,7 @@ This chart is an independent community project and is not affiliated with Tesla,
 
 ## Source Code
 
+* <https://github.com/dcardozoo/teslamate-helm-chart>
 * <https://github.com/teslamate-org/teslamate>
 * <https://github.com/cloudnative-pg/cloudnative-pg>
 * <https://github.com/cloudnative-pg/plugin-barman-cloud>
