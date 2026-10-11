@@ -50,7 +50,10 @@ jobs:
           echo "ref=${REGISTRY}/${owner}/charts/teslamate@${digest}" >> "$GITHUB_OUTPUT"
 
       - name: Sign chart with cosign (keyless)
-        run: cosign sign --yes "${{ steps.push.outputs.ref }}"
+        run: |
+          # cosign reads Docker credentials, not the ones from helm registry login.
+          echo "${{ secrets.GITHUB_TOKEN }}" | cosign login "$REGISTRY" --username "${{ github.actor }}" --password-stdin
+          cosign sign --yes "${{ steps.push.outputs.ref }}"
 
       - uses: oras-project/setup-oras@005458ad77f1c8facd38a094e4af2e69e5607ff4 # v2.0.2
 
