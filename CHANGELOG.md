@@ -4,6 +4,12 @@ All notable changes to this chart are documented here. The format follows [Keep 
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-11
+
+### Fixed
+
+- Chart `home` and `sources` now link to this chart's repository, so Artifact Hub shows it.
+
 ## [0.1.0] - 2026-10-11
 
 ### Added
@@ -18,5 +24,6 @@ All notable changes to this chart are documented here. The format follows [Keep 
 - `CHECK_ORIGIN=true` by default when a virtual host is known (Ingress or `teslamate.virtualHost`).
 - Helm test hooks, helm-unittest suites and CI scenario values.
 
-[Unreleased]: https://github.com/dcardozoo/teslamate-helm-chart/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/dcardozoo/teslamate-helm-chart/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/dcardozoo/teslamate-helm-chart/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/dcardozoo/teslamate-helm-chart/releases/tag/v0.1.0
