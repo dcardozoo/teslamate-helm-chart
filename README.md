@@ -2,7 +2,7 @@
 
 ![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 4.3.0](https://img.shields.io/badge/AppVersion-4.3.0-informational?style=flat-square)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
-[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/teslamate-helm-chart)](https://artifacthub.io/packages/search?repo=teslamate-helm-chart)
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/dcardozoo)](https://artifacthub.io/packages/search?repo=dcardozoo)
 [![Lint and test](https://github.com/dcardozoo/teslamate-helm-chart/actions/workflows/lint-test.yaml/badge.svg)](https://github.com/dcardozoo/teslamate-helm-chart/actions/workflows/lint-test.yaml)
 
 TeslaMate data logger with Grafana dashboards, Mosquitto MQTT broker and a highly available CloudNativePG PostgreSQL cluster. Requires the CloudNativePG operator (and the Barman Cloud plugin for backups) to be installed separately.
