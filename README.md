@@ -234,6 +234,15 @@ helm uninstall teslamate -n teslamate
 - Backup data in your object store is never touched.
 - The release-managed PVCs (TeslaMate import, Grafana, Mosquitto) are deleted with the release.
 
+## Support
+
+This chart is maintained in my free time. If it is useful to you, you can support it:
+
+- [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/danieljcardozo)
+- Another way to support me is to use my [Tesla referral link](https://ts.la/daniel252406) when you order a Tesla or a Tesla product; it gives credits to both of us.
+
+All credit for TeslaMate itself goes to the [TeslaMate project](https://github.com/teslamate-org/teslamate) and its contributors. Support them by starring the repository, reporting issues and contributing.
+
 ## Disclaimer
 
 This chart is an independent community project and is not affiliated with Tesla, Inc. or the TeslaMate project.
