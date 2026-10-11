@@ -65,4 +65,4 @@ The chart creates no roles for external databases, and backups (`database.cnpg.b
 
 ## Importing existing data
 
-See [upgrading.md](upgrading.md#migrating-from-docker-compose).
+See [migrating-from-docker-compose.md](migrating-from-docker-compose.md).

@@ -81,6 +81,8 @@ Verify the installation:
 helm test teslamate -n teslamate --logs
 ```
 
+Coming from the upstream docker-compose setup? See [docs/migrating-from-docker-compose.md](docs/migrating-from-docker-compose.md) to move your existing data.
+
 ## Configuration scenarios
 
 Pass these with `-f values.yaml`. Each one also needs `teslamate.encryptionKey` or `teslamate.existingSecret`.
@@ -203,7 +205,8 @@ Defaults: non-root, read-only root filesystem for TeslaMate and Mosquitto, `secc
 
 - [docs/database.md](docs/database.md): CNPG cluster, SUPERUSER, read-only role, uninstall behavior
 - [docs/backups.md](docs/backups.md): how scheduled backups and restores work
-- [docs/upgrading.md](docs/upgrading.md): TeslaMate, PostgreSQL and chart upgrades, migration from docker-compose
+- [docs/upgrading.md](docs/upgrading.md): TeslaMate, PostgreSQL and chart upgrades
+- [docs/migrating-from-docker-compose.md](docs/migrating-from-docker-compose.md): move an existing docker-compose installation and its data to this chart
 - [docs/troubleshooting.md](docs/troubleshooting.md)
 - [CONTRIBUTING.md](CONTRIBUTING.md): development and testing
 
