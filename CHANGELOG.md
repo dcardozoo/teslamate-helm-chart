@@ -4,7 +4,7 @@ All notable changes to this chart are documented here. The format follows [Keep 
 
 ## [Unreleased]
 
-## [0.1.0] - 2026-10-09
+## [0.1.0] - 2026-10-11
 
 ### Added
 
