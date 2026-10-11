@@ -1,6 +1,6 @@
 # Artifact Hub repository metadata, pushed to ghcr.io/dcardozoo/charts/teslamate:artifacthub.io
 # See https://artifacthub.io/docs/topics/repositories/#oci-repositories
-repositoryID: b26542b6-5e57-4578-bbda-ab4579dfc086
+repositoryID: 9c06f837-ba02-4d9d-ab9f-b2167a5d89ad
 owners:
   - name: Daniel Cardozo
     email: github@danieljcardozo.com
