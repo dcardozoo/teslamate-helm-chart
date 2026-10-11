@@ -3,8 +3,8 @@
   "extends": ["config:recommended"],
   "semanticCommits": "enabled",
   "helm-values": { "managerFilePatterns": ["/^values\\.yaml$/", "/^ci\\/.+-values\\.yaml$/"] },
-  "helmv3": { "enabled": true },
   "github-actions": { "enabled": true },
+  "pre-commit": { "enabled": true },
   "customManagers": [
     {
       "description": "Images in the artifacthub.io/images annotation of Chart.yaml",
@@ -26,7 +26,8 @@
       "description": "Versions in workflows annotated with a renovate comment",
       "customType": "regex",
       "managerFilePatterns": ["/^\\.github\\/workflows\\/.+\\.ya?ml$/"],
-      "matchStrings": ["# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)( registryUrl=(?<registryUrl>\\S+))?\\s+\\w+: (?<currentValue>\\S+)"]
+      "matchStrings": ["# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)( registryUrl=(?<registryUrl>\\S+))?\\s+\\w+: (?<currentValue>\\S+)"],
+      "extractVersionTemplate": "^v?(?<version>.+)$"
     },
     {
       "description": "appVersion tracks the teslamate/teslamate image",
@@ -43,6 +44,11 @@
       "description": "TeslaMate and its Grafana image are released in lockstep",
       "matchPackageNames": ["teslamate/teslamate", "teslamate/grafana"],
       "groupName": "teslamate images"
+    },
+    {
+      "description": "helm-docs in CI and pre-commit must match, or the README drift check fails",
+      "matchPackageNames": ["norwoodj/helm-docs"],
+      "groupName": "helm-docs"
     },
     {
       "description": "PostgreSQL major upgrades are never automated",

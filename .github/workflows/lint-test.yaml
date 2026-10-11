@@ -13,9 +13,12 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  # renovate: datasource=github-releases depName=norwoodj/helm-docs
   HELM_DOCS_VERSION: 1.14.2
+  # renovate: datasource=github-releases depName=yannh/kubeconform
   KUBECONFORM_VERSION: 0.8.0
-  HELM_UNITTEST_VERSION: v1.2.1
+  # renovate: datasource=github-releases depName=helm-unittest/helm-unittest
+  HELM_UNITTEST_VERSION: 1.2.1
   # renovate: datasource=helm depName=cloudnative-pg registryUrl=https://cloudnative-pg.github.io/charts
   CNPG_CHART_VERSION: 0.29.1
 
@@ -65,7 +68,7 @@ jobs:
         run: helm lint . --strict --set teslamate.encryptionKey=x
 
       - name: Install helm-unittest
-        run: helm plugin install https://github.com/helm-unittest/helm-unittest --version "$HELM_UNITTEST_VERSION" --verify=false
+        run: helm plugin install https://github.com/helm-unittest/helm-unittest --version "v${HELM_UNITTEST_VERSION}" --verify=false
 
       - name: helm unittest
         run: helm unittest .
