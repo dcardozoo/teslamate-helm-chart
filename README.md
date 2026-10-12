@@ -1,11 +1,11 @@
 # teslamate
 
-![Version: 0.1.1](https://img.shields.io/badge/Version-0.1.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 4.3.0](https://img.shields.io/badge/AppVersion-4.3.0-informational?style=flat-square)
+![Version: 0.2.0](https://img.shields.io/badge/Version-0.2.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 4.3.0](https://img.shields.io/badge/AppVersion-4.3.0-informational?style=flat-square)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 [![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/dcardozoo)](https://artifacthub.io/packages/search?repo=dcardozoo)
 [![Lint and test](https://github.com/dcardozoo/teslamate-helm-chart/actions/workflows/lint-test.yaml/badge.svg)](https://github.com/dcardozoo/teslamate-helm-chart/actions/workflows/lint-test.yaml)
 
-TeslaMate data logger with Grafana dashboards, Mosquitto MQTT broker and a highly available CloudNativePG PostgreSQL cluster. Requires the CloudNativePG operator (and the Barman Cloud plugin for backups) to be installed separately.
+TeslaMate data logger with Grafana dashboards, Mosquitto MQTT broker and a highly available CloudNativePG PostgreSQL cluster. Requires the CloudNativePG operator (and the Barman Cloud plugin for backups) to be installed separately, or an external PostgreSQL server.
 
 > This chart is an independent community project and is not affiliated with Tesla, Inc. or the TeslaMate project.
 
@@ -20,7 +20,7 @@ This chart deploys [TeslaMate](https://github.com/teslamate-org/teslamate) (a se
 - Eclipse Mosquitto as MQTT broker
 - a highly available PostgreSQL `Cluster` managed by [CloudNativePG](https://cloudnative-pg.io) (CNPG), with optional scheduled backups through the [Barman Cloud plugin](https://cloudnative-pg.io/plugin-barman-cloud/)
 
-By default the database uses the **CNPG operator** (and, for backups, the **Barman Cloud plugin**). This chart does **not** install either of them, see [Prerequisites](#prerequisites). Every component is optional, so you can also use an existing PostgreSQL server or MQTT broker.
+By default the database uses the **CNPG operator** (and, for backups, the **Barman Cloud plugin**). This chart does **not** install either of them, see [Prerequisites](#prerequisites). Every component is optional, so you can also use an existing PostgreSQL server or MQTT broker. For a quick test without any operator there is an [embedded database](#quick-start-with-the-embedded-database-test-only).
 
 ```mermaid
 flowchart LR
@@ -50,6 +50,8 @@ helm upgrade --install cnpg cnpg/cloudnative-pg -n cnpg-system --create-namespac
 ```
 
 Follow the linked documentation for the plugin and for production setups.
+
+The install fails with a clear message if the operator (or, with backups enabled, the plugin) is missing. The check only runs against a live cluster (`helm install`/`upgrade`, `--dry-run=server`), not for offline rendering such as `helm template` or ArgoCD, and it only sees the CRDs, not whether the operator or plugin is running.
 
 ## Quick start
 
@@ -82,6 +84,24 @@ helm test teslamate -n teslamate --logs
 ```
 
 Coming from the upstream docker-compose setup? See [docs/migrating-from-docker-compose.md](docs/migrating-from-docker-compose.md) to move your existing data.
+
+### Quick start with the embedded database (test only)
+
+To try the chart without installing the CNPG operator or providing a PostgreSQL server, use `database.type: embedded`. It deploys a single-replica PostgreSQL StatefulSet (official `postgres` image) with one PVC:
+
+```sh
+helm install teslamate oci://ghcr.io/dcardozoo/charts/teslamate \
+  -n teslamate --create-namespace \
+  --set teslamate.encryptionKey=$(openssl rand -base64 32) \
+  --set database.type=embedded \
+  --wait
+```
+
+> [!WARNING]
+> - **The embedded database is not supported.** The intended and recommended setups for this chart are a CNPG cluster (`cnpg`, default) or an external PostgreSQL server (`external`). Issues that only affect the embedded database will not be addressed.
+> - **This chart treats the embedded database as a test setup.** The CNPG cluster is the robust option, with replication, TLS, scheduled backups, automated upgrades and restores. The embedded database has none of these.
+
+Details and how to move to CNPG later: [docs/database.md](docs/database.md#embedded-database-test-only).
 
 ## Configuration scenarios
 
@@ -120,6 +140,15 @@ database:
 ```
 
 No CNPG operator is needed in this case.
+
+### Embedded database (test only)
+
+```yaml
+database:
+  type: embedded
+```
+
+Meant for tests only, see [Quick start with the embedded database](#quick-start-with-the-embedded-database-test-only).
 
 ### External MQTT broker
 
@@ -203,7 +232,7 @@ Defaults: non-root, read-only root filesystem for TeslaMate and Mosquitto, `secc
 
 ## Documentation
 
-- [docs/database.md](docs/database.md): CNPG cluster, SUPERUSER, read-only role, uninstall behavior
+- [docs/database.md](docs/database.md): CNPG cluster, SUPERUSER, read-only role, uninstall behavior, embedded database
 - [docs/backups.md](docs/backups.md): how scheduled backups and restores work
 - [docs/upgrading.md](docs/upgrading.md): TeslaMate, PostgreSQL and chart upgrades
 - [docs/migrating-from-docker-compose.md](docs/migrating-from-docker-compose.md): move an existing docker-compose installation and its data to this chart
@@ -218,7 +247,7 @@ helm test <release> -n <namespace>      # database, grafana, mosquitto and tesla
 scripts/e2e.sh ci/default-values.yaml   # install + helm test + uninstall on the current kube-context (kind)
 ```
 
-`helm test` runs pods that check the database (TLS, extensions, migrations, owner is SUPERUSER, read-only role), Grafana health, a Mosquitto publish and the TeslaMate HTTP endpoint. `scripts/e2e.sh` takes any `ci/*-values.yaml` (scenarios: default, readonly-grafana, minimal) and needs the CNPG operator installed in the cluster. Neither the operator, the Barman Cloud plugin nor backups and restores are tested by this chart.
+`helm test` runs pods that check the database (TLS, extensions, migrations, owner is SUPERUSER, read-only role), Grafana health, a Mosquitto publish and the TeslaMate HTTP endpoint. `scripts/e2e.sh` takes any `ci/*-values.yaml` (scenarios: default, readonly-grafana, embedded) and needs the CNPG operator installed in the cluster, except for `embedded`. Neither the operator, the Barman Cloud plugin nor backups and restores are tested by this chart.
 
 ## Uninstall
 
@@ -231,6 +260,11 @@ helm uninstall teslamate -n teslamate
   kubectl -n teslamate delete clusters.postgresql.cnpg.io,objectstores.barmancloud.cnpg.io --all
   ```
 - With `keepOnUninstall: false`, `helm uninstall` deletes the Cluster and CNPG deletes its PVCs. **This deletes your data.**
+- With `database.type: embedded`, the StatefulSet's PVC (`data-<fullname>-postgresql-0`) and its password Secret are kept. Delete them manually when you no longer need the data:
+  ```sh
+  kubectl -n teslamate delete pvc data-teslamate-postgresql-0
+  kubectl -n teslamate delete secret teslamate-postgresql
+  ```
 - Backup data in your object store is never touched.
 - The release-managed PVCs (TeslaMate import, Grafana, Mosquitto) are deleted with the release.
 
@@ -290,6 +324,32 @@ Kubernetes: `>=1.29.0-0`
 | database.cnpg.walStorage.enabled | bool | `false` |  |
 | database.cnpg.walStorage.size | string | `"2Gi"` |  |
 | database.cnpg.walStorage.storageClass | string | `""` |  |
+| database.embedded.affinity | object | `{}` |  |
+| database.embedded.database | string | `"teslamate"` |  |
+| database.embedded.existingSecret | string | `""` | Existing secret with the owner password (key `password`). Without it a random password is generated and kept across upgrades and uninstalls. |
+| database.embedded.image.pullPolicy | string | `"IfNotPresent"` |  |
+| database.embedded.image.repository | string | `"postgres"` |  |
+| database.embedded.image.tag | string | `"18.6-trixie"` |  |
+| database.embedded.nodeSelector | object | `{}` |  |
+| database.embedded.persistence.accessModes[0] | string | `"ReadWriteOnce"` |  |
+| database.embedded.persistence.size | string | `"5Gi"` |  |
+| database.embedded.persistence.storageClass | string | `""` |  |
+| database.embedded.podAnnotations | object | `{}` |  |
+| database.embedded.podLabels | object | `{}` |  |
+| database.embedded.podSecurityContext.fsGroup | int | `999` |  |
+| database.embedded.podSecurityContext.runAsGroup | int | `999` |  |
+| database.embedded.podSecurityContext.runAsNonRoot | bool | `true` |  |
+| database.embedded.podSecurityContext.runAsUser | int | `999` |  |
+| database.embedded.podSecurityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
+| database.embedded.priorityClassName | string | `""` |  |
+| database.embedded.resources.limits.memory | string | `"1Gi"` |  |
+| database.embedded.resources.requests.cpu | string | `"50m"` |  |
+| database.embedded.resources.requests.memory | string | `"256Mi"` |  |
+| database.embedded.securityContext.allowPrivilegeEscalation | bool | `false` |  |
+| database.embedded.securityContext.capabilities.drop[0] | string | `"ALL"` |  |
+| database.embedded.securityContext.readOnlyRootFilesystem | bool | `true` |  |
+| database.embedded.tolerations | list | `[]` |  |
+| database.embedded.username | string | `"teslamate"` | Database owner, created as the image's SUPERUSER (`POSTGRES_USER`). |
 | database.external.database | string | `"teslamate"` |  |
 | database.external.existingSecret | string | `""` | Existing secret holding the password. |
 | database.external.existingSecretPasswordKey | string | `"password"` |  |
@@ -297,7 +357,7 @@ Kubernetes: `>=1.29.0-0`
 | database.external.port | int | `5432` |  |
 | database.external.ssl | string | `"false"` | `DATABASE_SSL` for TeslaMate: `false`, `true` or `noverify`. |
 | database.external.username | string | `"teslamate"` |  |
-| database.type | string | `"cnpg"` | `cnpg` deploys a CloudNativePG cluster (requires the CNPG operator, installed separately); `external` uses an existing PostgreSQL server. |
+| database.type | string | `"cnpg"` | `cnpg` deploys a CloudNativePG cluster (requires the CNPG operator, installed separately); `external` uses an existing PostgreSQL server; `embedded` deploys a single-replica PostgreSQL StatefulSet (test setup only, not supported: no replication, TLS, backups or automated upgrades). |
 | fullnameOverride | string | `""` | Override the full resource name prefix. |
 | grafana.affinity | object | `{}` |  |
 | grafana.databaseSslMode | string | `""` | PostgreSQL `sslmode` used by the Grafana datasource. Defaults to `require` with the CNPG database and `disable` for external databases. |

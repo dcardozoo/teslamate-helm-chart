@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Install, test and uninstall the chart once per values file on the current kube-context.
-# Requires the CloudNativePG operator to be installed in the cluster.
-# Usage: scripts/e2e.sh ci/default-values.yaml [ci/minimal-values.yaml ...]
+# Requires the CloudNativePG operator to be installed in the cluster, except for database.type=embedded.
+# Usage: scripts/e2e.sh ci/default-values.yaml [ci/embedded-values.yaml ...]
 set -euo pipefail
 
 CHART_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -38,11 +38,11 @@ cleanup() {
 }
 
 [[ $# -gt 0 ]] || { echo "usage: $0 <values-file>..." >&2; exit 2; }
-kubectl get crd clusters.postgresql.cnpg.io >/dev/null 2>&1 \
-  || { echo "CloudNativePG operator not found: install it first (https://cloudnative-pg.io/documentation/current/installation_upgrade/)" >&2; exit 1; }
 
 for values in "$@"; do
   log "Scenario: $values (context: $(kubectl config current-context))"
+  grep -qE '^[[:space:]]+type: embedded' "$values" || kubectl get crd clusters.postgresql.cnpg.io >/dev/null 2>&1 \
+    || { echo "CloudNativePG operator not found: install it first (https://cloudnative-pg.io/documentation/current/installation_upgrade/)" >&2; exit 1; }
   fixtures
   # keepOnUninstall=false so cleanup can verify the Cluster is removed with the release.
   if ! helm upgrade --install "$RELEASE" "$CHART_DIR" -n "$NAMESPACE" -f "$values" \

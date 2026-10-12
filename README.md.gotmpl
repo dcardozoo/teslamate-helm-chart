@@ -22,7 +22,7 @@ This chart deploys [TeslaMate](https://github.com/teslamate-org/teslamate) (a se
 - Eclipse Mosquitto as MQTT broker
 - a highly available PostgreSQL `Cluster` managed by [CloudNativePG](https://cloudnative-pg.io) (CNPG), with optional scheduled backups through the [Barman Cloud plugin](https://cloudnative-pg.io/plugin-barman-cloud/)
 
-By default the database uses the **CNPG operator** (and, for backups, the **Barman Cloud plugin**). This chart does **not** install either of them, see [Prerequisites](#prerequisites). Every component is optional, so you can also use an existing PostgreSQL server or MQTT broker.
+By default the database uses the **CNPG operator** (and, for backups, the **Barman Cloud plugin**). This chart does **not** install either of them, see [Prerequisites](#prerequisites). Every component is optional, so you can also use an existing PostgreSQL server or MQTT broker. For a quick test without any operator there is an [embedded database](#quick-start-with-the-embedded-database-test-only).
 
 ```mermaid
 flowchart LR
@@ -52,6 +52,8 @@ helm upgrade --install cnpg cnpg/cloudnative-pg -n cnpg-system --create-namespac
 ```
 
 Follow the linked documentation for the plugin and for production setups.
+
+The install fails with a clear message if the operator (or, with backups enabled, the plugin) is missing. The check only runs against a live cluster (`helm install`/`upgrade`, `--dry-run=server`), not for offline rendering such as `helm template` or ArgoCD, and it only sees the CRDs, not whether the operator or plugin is running.
 
 ## Quick start
 
@@ -84,6 +86,24 @@ helm test teslamate -n teslamate --logs
 ```
 
 Coming from the upstream docker-compose setup? See [docs/migrating-from-docker-compose.md](docs/migrating-from-docker-compose.md) to move your existing data.
+
+### Quick start with the embedded database (test only)
+
+To try the chart without installing the CNPG operator or providing a PostgreSQL server, use `database.type: embedded`. It deploys a single-replica PostgreSQL StatefulSet (official `postgres` image) with one PVC:
+
+```sh
+helm install teslamate oci://ghcr.io/dcardozoo/charts/teslamate \
+  -n teslamate --create-namespace \
+  --set teslamate.encryptionKey=$(openssl rand -base64 32) \
+  --set database.type=embedded \
+  --wait
+```
+
+> [!WARNING]
+> - **The embedded database is not supported.** The intended and recommended setups for this chart are a CNPG cluster (`cnpg`, default) or an external PostgreSQL server (`external`). Issues that only affect the embedded database will not be addressed.
+> - **This chart treats the embedded database as a test setup.** The CNPG cluster is the robust option, with replication, TLS, scheduled backups, automated upgrades and restores. The embedded database has none of these.
+
+Details and how to move to CNPG later: [docs/database.md](docs/database.md#embedded-database-test-only).
 
 ## Configuration scenarios
 
@@ -122,6 +142,15 @@ database:
 ```
 
 No CNPG operator is needed in this case.
+
+### Embedded database (test only)
+
+```yaml
+database:
+  type: embedded
+```
+
+Meant for tests only, see [Quick start with the embedded database](#quick-start-with-the-embedded-database-test-only).
 
 ### External MQTT broker
 
@@ -205,7 +234,7 @@ Defaults: non-root, read-only root filesystem for TeslaMate and Mosquitto, `secc
 
 ## Documentation
 
-- [docs/database.md](docs/database.md): CNPG cluster, SUPERUSER, read-only role, uninstall behavior
+- [docs/database.md](docs/database.md): CNPG cluster, SUPERUSER, read-only role, uninstall behavior, embedded database
 - [docs/backups.md](docs/backups.md): how scheduled backups and restores work
 - [docs/upgrading.md](docs/upgrading.md): TeslaMate, PostgreSQL and chart upgrades
 - [docs/migrating-from-docker-compose.md](docs/migrating-from-docker-compose.md): move an existing docker-compose installation and its data to this chart
@@ -220,7 +249,7 @@ helm test <release> -n <namespace>      # database, grafana, mosquitto and tesla
 scripts/e2e.sh ci/default-values.yaml   # install + helm test + uninstall on the current kube-context (kind)
 ```
 
-`helm test` runs pods that check the database (TLS, extensions, migrations, owner is SUPERUSER, read-only role), Grafana health, a Mosquitto publish and the TeslaMate HTTP endpoint. `scripts/e2e.sh` takes any `ci/*-values.yaml` (scenarios: default, readonly-grafana, minimal) and needs the CNPG operator installed in the cluster. Neither the operator, the Barman Cloud plugin nor backups and restores are tested by this chart.
+`helm test` runs pods that check the database (TLS, extensions, migrations, owner is SUPERUSER, read-only role), Grafana health, a Mosquitto publish and the TeslaMate HTTP endpoint. `scripts/e2e.sh` takes any `ci/*-values.yaml` (scenarios: default, readonly-grafana, embedded) and needs the CNPG operator installed in the cluster, except for `embedded`. Neither the operator, the Barman Cloud plugin nor backups and restores are tested by this chart.
 
 ## Uninstall
 
@@ -233,6 +262,11 @@ helm uninstall teslamate -n teslamate
   kubectl -n teslamate delete clusters.postgresql.cnpg.io,objectstores.barmancloud.cnpg.io --all
   ```
 - With `keepOnUninstall: false`, `helm uninstall` deletes the Cluster and CNPG deletes its PVCs. **This deletes your data.**
+- With `database.type: embedded`, the StatefulSet's PVC (`data-<fullname>-postgresql-0`) and its password Secret are kept. Delete them manually when you no longer need the data:
+  ```sh
+  kubectl -n teslamate delete pvc data-teslamate-postgresql-0
+  kubectl -n teslamate delete secret teslamate-postgresql
+  ```
 - Backup data in your object store is never touched.
 - The release-managed PVCs (TeslaMate import, Grafana, Mosquitto) are deleted with the release.
 

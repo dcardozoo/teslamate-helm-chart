@@ -1,0 +1,12 @@
+suite: prerequisites when rendering offline
+templates:
+  - templates/validate.yaml
+set:
+  teslamate.encryptionKey: x
+tests:
+  - it: skips the check without a live cluster (helm template, ArgoCD)
+    set:
+      database.cnpg.backup.enabled: true
+      database.cnpg.backup.objectStore.destinationPath: s3://b/
+    asserts:
+      - notFailedTemplate: {}

@@ -1,0 +1,86 @@
+suite: embedded database
+templates:
+  - templates/database/embedded/statefulset.yaml
+  - templates/database/embedded/service.yaml
+  - templates/database/embedded/secret.yaml
+  - templates/database/cnpg/cluster.yaml
+  - templates/teslamate/deployment.yaml
+  - templates/teslamate/secret.yaml
+  - templates/validate.yaml
+  - templates/grafana/deployment.yaml
+release:
+  name: tm
+  namespace: cars
+set:
+  teslamate.encryptionKey: x
+  database.type: embedded
+tests:
+  - it: renders a single-replica StatefulSet with a PVC
+    template: templates/database/embedded/statefulset.yaml
+    asserts:
+      - isKind: {of: StatefulSet}
+      - equal: {path: metadata.name, value: tm-teslamate-postgresql}
+      - equal: {path: spec.replicas, value: 1}
+      - equal: {path: 'spec.template.spec.containers[0].image', value: "postgres:18.6-trixie"}
+      - equal: {path: 'spec.volumeClaimTemplates[0].spec.resources.requests.storage', value: 5Gi}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_PASSWORD
+            valueFrom: {secretKeyRef: {name: tm-teslamate-postgresql, key: password}}
+  - it: exposes PostgreSQL through a ClusterIP Service
+    template: templates/database/embedded/service.yaml
+    asserts:
+      - equal: {path: spec.type, value: ClusterIP}
+      - equal: {path: 'spec.ports[0].port', value: 5432}
+  - it: generates a kept password Secret
+    template: templates/database/embedded/secret.yaml
+    asserts:
+      - equal: {path: 'metadata.annotations["helm.sh/resource-policy"]', value: keep}
+      - exists: {path: data.password}
+  - it: uses an existing password Secret
+    set:
+      database.embedded.existingSecret: pg-auth
+    asserts:
+      - hasDocuments: {count: 0}
+        template: templates/database/embedded/secret.yaml
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_PASS
+            valueFrom: {secretKeyRef: {name: pg-auth, key: password}}
+        template: templates/teslamate/deployment.yaml
+  - it: renders no CNPG Cluster
+    template: templates/database/cnpg/cluster.yaml
+    asserts:
+      - hasDocuments: {count: 0}
+  - it: connects TeslaMate without TLS
+    template: templates/teslamate/deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: DATABASE_HOST, value: tm-teslamate-postgresql}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: DATABASE_SSL, value: "false"}
+      - notContains:
+          path: spec.template.spec.volumes
+          content: {name: db-ca}
+          any: true
+  - it: connects Grafana as the owner without TLS
+    template: templates/grafana/deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: DATABASE_SSL_MODE, value: disable}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: DATABASE_USER, value: teslamate}
+  - it: rejects the Grafana read-only role
+    template: templates/validate.yaml
+    set:
+      grafana.readOnlyUser.enabled: true
+      grafana.readOnlyUser.existingSecret: gf-ro
+    asserts:
+      - failedTemplate:
+          errorPattern: "only supported with database.type=cnpg"

@@ -58,6 +58,14 @@ imagePullSecrets:
 {{- if eq .Values.database.type "cnpg" }}true{{ end }}
 {{- end }}
 
+{{- define "teslamate.embeddedEnabled" -}}
+{{- if eq .Values.database.type "embedded" }}true{{ end }}
+{{- end }}
+
+{{- define "teslamate.embedded.name" -}}
+{{- include "teslamate.componentName" (dict "ctx" . "component" "postgresql") }}
+{{- end }}
+
 {{- define "teslamate.cnpg.clusterName" -}}
 {{- include "teslamate.componentName" (dict "ctx" . "component" "db") }}
 {{- end }}
@@ -84,30 +92,38 @@ barman-cloud.cloudnative-pg.io
 {{- define "teslamate.db.host" -}}
 {{- if include "teslamate.cnpgEnabled" . }}
 {{- printf "%s-rw" (include "teslamate.cnpg.clusterName" .) }}
+{{- else if include "teslamate.embeddedEnabled" . }}
+{{- include "teslamate.embedded.name" . }}
 {{- else }}
 {{- required "database.external.host is required when database.type=external" .Values.database.external.host }}
 {{- end }}
 {{- end }}
 
 {{- define "teslamate.db.port" -}}
-{{- if include "teslamate.cnpgEnabled" . }}5432{{ else }}{{ .Values.database.external.port }}{{ end }}
+{{- if eq .Values.database.type "external" }}{{ .Values.database.external.port }}{{ else }}5432{{ end }}
 {{- end }}
 
 {{- define "teslamate.db.name" -}}
-{{- if include "teslamate.cnpgEnabled" . }}{{ .Values.database.cnpg.database }}{{ else }}{{ .Values.database.external.database }}{{ end }}
+{{- (get .Values.database .Values.database.type).database }}
 {{- end }}
 
 {{/* Secret with username/password keys for the TeslaMate database owner. */}}
 {{- define "teslamate.db.secretName" -}}
 {{- if include "teslamate.cnpgEnabled" . }}
 {{- printf "%s-app" (include "teslamate.cnpg.clusterName" .) }}
+{{- else if include "teslamate.embeddedEnabled" . }}
+{{- .Values.database.embedded.existingSecret | default (include "teslamate.embedded.name" .) }}
 {{- else }}
 {{- required "database.external.existingSecret is required when database.type=external" .Values.database.external.existingSecret }}
 {{- end }}
 {{- end }}
 
 {{- define "teslamate.db.passwordKey" -}}
-{{- if include "teslamate.cnpgEnabled" . }}password{{ else }}{{ .Values.database.external.existingSecretPasswordKey }}{{ end }}
+{{- if eq .Values.database.type "external" }}{{ .Values.database.external.existingSecretPasswordKey }}{{ else }}password{{ end }}
+{{- end }}
+
+{{- define "teslamate.db.user" -}}
+{{- if include "teslamate.cnpgEnabled" . }}{{ .Values.database.cnpg.owner }}{{ else }}{{ (get .Values.database .Values.database.type).username }}{{ end }}
 {{- end }}
 
 {{/* DATABASE_* env vars for TeslaMate. */}}
@@ -118,16 +134,17 @@ barman-cloud.cloudnative-pg.io
   value: {{ include "teslamate.db.port" . | quote }}
 - name: DATABASE_NAME
   value: {{ include "teslamate.db.name" . | quote }}
-{{- if include "teslamate.cnpgEnabled" . }}
 - name: DATABASE_USER
-  value: {{ .Values.database.cnpg.owner | quote }}
+  value: {{ include "teslamate.db.user" . | quote }}
+{{- if include "teslamate.cnpgEnabled" . }}
 - name: DATABASE_SSL
   value: "true"
 - name: DATABASE_SSL_CA_CERT_FILE
   value: /etc/teslamate/db-ca/ca.crt
+{{- else if include "teslamate.embeddedEnabled" . }}
+- name: DATABASE_SSL
+  value: "false"
 {{- else }}
-- name: DATABASE_USER
-  value: {{ .Values.database.external.username | quote }}
 - name: DATABASE_SSL
   value: {{ .Values.database.external.ssl | toString | quote }}
 {{- end }}
@@ -161,13 +178,22 @@ barman-cloud.cloudnative-pg.io
 {{/* ---------- Validation ---------- */}}
 
 {{- define "teslamate.validate" -}}
-{{- if not (has .Values.database.type (list "cnpg" "external")) }}
-{{- fail "database.type must be one of: cnpg, external" }}
+{{- if not (has .Values.database.type (list "cnpg" "external" "embedded")) }}
+{{- fail "database.type must be one of: cnpg, external, embedded" }}
 {{- end }}
 {{- if and .Values.teslamate.enabled (not .Values.teslamate.existingSecret) (not .Values.teslamate.encryptionKey) }}
 {{- fail "Set teslamate.encryptionKey or teslamate.existingSecret. Generate one with: openssl rand -base64 32" }}
 {{- end }}
 {{- if include "teslamate.cnpgEnabled" . }}
+{{- /* lookup is empty when rendering offline (helm template/lint, ArgoCD), so this only runs against a live cluster. */}}
+{{- if lookup "v1" "Secret" .Release.Namespace "" }}
+{{- if not (.Capabilities.APIVersions.Has "postgresql.cnpg.io/v1/Cluster") }}
+{{- fail "The CloudNativePG operator is required for database.type=cnpg and was not found (no postgresql.cnpg.io/v1 Cluster API). Install it first: https://cloudnative-pg.io/docs/current/installation_upgrade/" }}
+{{- end }}
+{{- if and .Values.database.cnpg.backup.enabled (not (.Capabilities.APIVersions.Has "barmancloud.cnpg.io/v1/ObjectStore")) }}
+{{- fail "The Barman Cloud plugin is required for database.cnpg.backup.enabled=true and was not found (no barmancloud.cnpg.io/v1 ObjectStore API). Install it first: https://cloudnative-pg.io/plugin-barman-cloud/docs/installation/" }}
+{{- end }}
+{{- end }}
 {{- if lt (int .Values.database.cnpg.instances) 2 }}
 {{- fail "database.cnpg.instances must be at least 2 (one primary, one replica)" }}
 {{- end }}
@@ -179,7 +205,7 @@ barman-cloud.cloudnative-pg.io
 {{- end }}
 {{- else }}
 {{- if .Values.database.cnpg.backup.enabled }}
-{{- fail "database.cnpg.backup.enabled only applies to database.type=cnpg; back up your external database yourself" }}
+{{- fail "database.cnpg.backup.enabled only applies to database.type=cnpg; back up your database yourself" }}
 {{- end }}
 {{- if .Values.grafana.readOnlyUser.enabled }}
 {{- fail "grafana.readOnlyUser is only supported with database.type=cnpg" }}

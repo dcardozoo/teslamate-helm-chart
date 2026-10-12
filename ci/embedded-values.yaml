@@ -1,0 +1,5 @@
+# Single-replica embedded PostgreSQL StatefulSet; no CNPG operator needed.
+teslamate:
+  encryptionKey: e2e-only-not-secret
+database:
+  type: embedded

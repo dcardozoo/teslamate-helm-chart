@@ -114,7 +114,7 @@ jobs:
       fail-fast: false
       matrix:
         k8s: [v1.36.4, v1.37.0]
-        scenario: [default, readonly-grafana, minimal]
+        scenario: [default, readonly-grafana, embedded]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -126,6 +126,7 @@ jobs:
           cluster_name: e2e
 
       - name: Install CloudNativePG operator (test prerequisite)
+        if: matrix.scenario != 'embedded'
         run: |
           helm install cnpg cloudnative-pg --repo https://cloudnative-pg.github.io/charts \
             --version "$CNPG_CHART_VERSION" -n cnpg-system --create-namespace --wait --timeout 5m

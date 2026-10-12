@@ -1,0 +1,45 @@
+suite: operator and plugin prerequisites
+templates:
+  - templates/validate.yaml
+release:
+  name: tm
+  namespace: cars
+set:
+  teslamate.encryptionKey: x
+# A non-empty lookup simulates helm install against a live cluster.
+kubernetesProvider:
+  scheme:
+    "v1/Secret":
+      gvr: {version: v1, resource: secrets}
+      namespaced: true
+  objects:
+    - apiVersion: v1
+      kind: Secret
+      metadata: {name: existing, namespace: cars}
+tests:
+  - it: requires the CNPG operator on install
+    asserts:
+      - failedTemplate:
+          errorPattern: "The CloudNativePG operator is required"
+  - it: requires the Barman Cloud plugin for backups on install
+    capabilities:
+      apiVersions: [postgresql.cnpg.io/v1/Cluster]
+    set:
+      database.cnpg.backup.enabled: true
+      database.cnpg.backup.objectStore.destinationPath: s3://b/
+    asserts:
+      - failedTemplate:
+          errorPattern: "The Barman Cloud plugin is required"
+  - it: passes when the operator and plugin are installed
+    capabilities:
+      apiVersions: [postgresql.cnpg.io/v1/Cluster, barmancloud.cnpg.io/v1/ObjectStore]
+    set:
+      database.cnpg.backup.enabled: true
+      database.cnpg.backup.objectStore.destinationPath: s3://b/
+    asserts:
+      - notFailedTemplate: {}
+  - it: does not check the embedded database
+    set:
+      database.type: embedded
+    asserts:
+      - notFailedTemplate: {}
