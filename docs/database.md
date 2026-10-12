@@ -63,6 +63,40 @@ database:
 
 The chart creates no roles for external databases, and backups (`database.cnpg.backup`) are rejected. The user must be able to run TeslaMate's migrations, including `CREATE EXTENSION earthdistance` (see above), so grant it SUPERUSER yourself. Grafana's `sslmode` defaults to `disable` for external databases; set `grafana.databaseSslMode` if your server uses TLS.
 
+## Embedded database (test only)
+
+> [!WARNING]
+> - **The embedded database is not supported.** The intended and recommended setups for this chart are a CNPG cluster (`cnpg`, default) or an external PostgreSQL server (`external`). Issues that only affect the embedded database will not be addressed.
+> - **This chart treats the embedded database as a test setup.** The CNPG cluster is the robust option, with replication, TLS, scheduled backups, automated upgrades and restores. The embedded database has none of these.
+
+It is meant for a quick start without installing the CNPG operator or providing a PostgreSQL server:
+
+```yaml
+database:
+  type: embedded
+  embedded:
+    persistence:
+      size: 5Gi
+    existingSecret: ""           # optional, key "password"; otherwise a random password is generated
+```
+
+- A single-replica StatefulSet `<fullname>-postgresql` with the official `postgres` image (`database.embedded.image`), a Service of the same name and one PVC (`data-<fullname>-postgresql-0`).
+- The owner (`database.embedded.username`, default `teslamate`) is the image's `POSTGRES_USER` and therefore a SUPERUSER, as with CNPG.
+- No TLS: TeslaMate uses `DATABASE_SSL=false` and Grafana `sslmode=disable`.
+- `grafana.readOnlyUser` and `database.cnpg.backup` are rejected.
+- The generated password Secret and the PVC are kept on `helm uninstall`. The password is only applied when the data directory is first initialised, so do not delete the Secret while you keep the PVC.
+- The PVC comes from `volumeClaimTemplates`: changing `persistence` after the install fails the upgrade.
+- **Never change the PostgreSQL major version of the image.** PostgreSQL 18 images keep their data in a version-specific directory, so a different major starts with an empty database. Move to a new major with a dump and restore.
+
+### Moving to CNPG
+
+Dump the embedded database, then install the chart with `database.type: cnpg` (in a new namespace or release) and restore it as described in [migrating-from-docker-compose.md](migrating-from-docker-compose.md), starting at step 2:
+
+```sh
+kubectl -n teslamate scale deploy/teslamate --replicas=0
+kubectl -n teslamate exec teslamate-postgresql-0 -- pg_dump -U teslamate teslamate > teslamate.bck
+```
+
 ## Importing existing data
 
 See [migrating-from-docker-compose.md](migrating-from-docker-compose.md).

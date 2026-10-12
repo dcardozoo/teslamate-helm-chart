@@ -1,6 +1,6 @@
 suite: cnpg database
 templates:
-  - templates/database/cluster.yaml
+  - templates/database/cnpg/cluster.yaml
 release:
   name: tm
   namespace: cars

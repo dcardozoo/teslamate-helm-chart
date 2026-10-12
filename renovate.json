@@ -53,7 +53,7 @@
     },
     {
       "description": "PostgreSQL major upgrades are never automated",
-      "matchPackageNames": ["ghcr.io/cloudnative-pg/postgresql"],
+      "matchPackageNames": ["ghcr.io/cloudnative-pg/postgresql", "postgres"],
       "matchUpdateTypes": ["major"],
       "enabled": false
     },

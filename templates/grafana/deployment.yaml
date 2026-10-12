@@ -65,7 +65,7 @@ spec:
                   key: password
             {{- else }}
             - name: DATABASE_USER
-              value: {{ ternary .Values.database.cnpg.owner .Values.database.external.username (eq $cnpg "true") | quote }}
+              value: {{ include "teslamate.db.user" . | quote }}
             - name: DATABASE_PASS
               valueFrom:
                 secretKeyRef:

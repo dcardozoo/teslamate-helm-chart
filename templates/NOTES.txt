@@ -11,6 +11,11 @@ Database: CloudNativePG cluster "{{ include "teslamate.cnpg.clusterName" . }}" (
 {{- else }}
   Backups are disabled. Backing up your database is your responsibility, see the chart's docs/backups.md.
 {{- end }}
+{{- else if include "teslamate.embeddedEnabled" . }}
+
+WARNING: Embedded database (single-replica PostgreSQL StatefulSet "{{ include "teslamate.embedded.name" . }}").
+  This is a test setup and is not supported: no replication, TLS, backups or automated upgrades.
+  Use database.type=cnpg or external for real use. Its PVC and password Secret are kept on `helm uninstall`.
 {{- end }}
 {{- if .Values.teslamate.enabled }}
 
