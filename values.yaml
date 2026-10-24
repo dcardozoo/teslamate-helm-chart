@@ -194,8 +194,6 @@ mosquitto:
   enabled: true
   image:
     repository: eclipse-mosquitto
-    # -- (string)
-    # @default -- Pinned in values.yaml, updated by Renovate.
     tag: 2.1.2-alpine
     pullPolicy: IfNotPresent
   # -- Full `mosquitto.conf`. Defaults to an anonymous listener on 1883 (cluster-internal only by default).
@@ -245,8 +243,6 @@ database:
   embedded:
     image:
       repository: postgres
-      # -- (string)
-      # @default -- Pinned in values.yaml, updated by Renovate.
       tag: 18.6-trixie
       pullPolicy: IfNotPresent
     database: teslamate
@@ -298,8 +294,6 @@ database:
   cnpg:
     # -- PostgreSQL instances (1 primary + n-1 streaming replicas). Minimum 2.
     instances: 2
-    # -- (string)
-    # @default -- Pinned in values.yaml, updated by Renovate.
     imageName: ghcr.io/cloudnative-pg/postgresql:18.6-standard-trixie
     imagePullPolicy: IfNotPresent
     database: teslamate
@@ -361,7 +355,6 @@ database:
           compression: gzip
 
 # -- Images used by `helm test`.
-# @default -- Pinned in values.yaml, updated by Renovate.
 tests:
   curlImage:
     repository: curlimages/curl
