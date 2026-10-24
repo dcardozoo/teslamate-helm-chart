@@ -5,7 +5,7 @@ description: >-
   CloudNativePG PostgreSQL cluster. Requires the CloudNativePG operator (and the Barman Cloud plugin
   for backups) to be installed separately, or an external PostgreSQL server.
 type: application
-version: 0.2.0
+version: 0.3.0
 appVersion: "4.4.0"
 kubeVersion: ">=1.29.0-0"
 home: https://github.com/dcardozoo/teslamate-helm-chart
