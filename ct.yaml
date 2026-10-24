@@ -4,5 +4,4 @@ charts:
   - .
 target-branch: main
 validate-maintainers: false
-check-version-increment: true
 helm-extra-args: --timeout 300s

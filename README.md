@@ -1,6 +1,6 @@
 # teslamate
 
-![Version: 0.2.0](https://img.shields.io/badge/Version-0.2.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 4.4.0](https://img.shields.io/badge/AppVersion-4.4.0-informational?style=flat-square)
+![Version: 0.3.0](https://img.shields.io/badge/Version-0.3.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 4.4.0](https://img.shields.io/badge/AppVersion-4.4.0-informational?style=flat-square)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 [![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/dcardozoo)](https://artifacthub.io/packages/search?repo=dcardozoo)
 [![Lint and test](https://github.com/dcardozoo/teslamate-helm-chart/actions/workflows/lint-test.yaml/badge.svg)](https://github.com/dcardozoo/teslamate-helm-chart/actions/workflows/lint-test.yaml)

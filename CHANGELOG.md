@@ -4,6 +4,13 @@ All notable changes to this chart are documented here. The format follows [Keep 
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-24
+
+### Changed
+
+- TeslaMate and its Grafana image updated to 4.4.0 (chart `appVersion` 4.4.0). It runs database migrations on startup and changes how missing values are published over MQTT, see the [TeslaMate 4.4.0 release notes](https://github.com/teslamate-org/teslamate/releases/tag/v4.4.0).
+- `helm test` curl image updated to 8.23.0.
+
 ## [0.2.0] - 2026-10-12
 
 ### Added
@@ -39,7 +46,8 @@ All notable changes to this chart are documented here. The format follows [Keep 
 - `CHECK_ORIGIN=true` by default when a virtual host is known (Ingress or `teslamate.virtualHost`).
 - Helm test hooks, helm-unittest suites and CI scenario values.
 
-[Unreleased]: https://github.com/dcardozoo/teslamate-helm-chart/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/dcardozoo/teslamate-helm-chart/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/dcardozoo/teslamate-helm-chart/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/dcardozoo/teslamate-helm-chart/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/dcardozoo/teslamate-helm-chart/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/dcardozoo/teslamate-helm-chart/releases/tag/v0.1.0

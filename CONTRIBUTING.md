@@ -37,7 +37,7 @@ The CNPG operator is a test prerequisite, not part of the chart. The operator, t
 ## Pull requests
 
 - Use [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `chore:`, `ci:`, ...). Mark breaking changes with `!` or a `BREAKING CHANGE:` footer.
-- Bump `version` in `Chart.yaml` for every change that affects the packaged chart (semver: patch for fixes, minor for features, major for breaking value changes). CI enforces this.
+- Bump `version` in `Chart.yaml` for every change that affects the packaged chart (semver: patch for fixes, minor for features or app minor upgrades, major for breaking value changes). CI enforces this, except for Renovate PRs, which are released in batches.
 - Add or update unit tests in `tests/` and, for behaviour changes, a scenario in `ci/`.
 - Document every new value with a `# --` comment in `values.yaml`, then run `helm-docs` and commit the regenerated `README.md`. CI fails on drift.
 - Add an entry under `[Unreleased]` in `CHANGELOG.md`.

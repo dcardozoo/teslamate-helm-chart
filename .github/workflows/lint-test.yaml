@@ -73,6 +73,18 @@ jobs:
       - name: helm unittest
         run: helm unittest .
 
+      # ct skips its own version check when `charts` is set; Renovate bumps are released in batches
+      - name: Chart version bump check
+        if: github.event_name == 'pull_request' && github.event.pull_request.user.login != 'renovate[bot]'
+        run: |
+          git diff --quiet "origin/${GITHUB_BASE_REF}...HEAD" -- Chart.yaml values.yaml values.schema.json templates .helmignore && exit 0
+          old=$(git show "origin/${GITHUB_BASE_REF}:Chart.yaml" | yq .version)
+          new=$(yq .version Chart.yaml)
+          if [ "$old" = "$new" ] || [ "$(printf '%s\n%s\n' "$old" "$new" | sort -V | tail -1)" != "$new" ]; then
+            echo "::error file=Chart.yaml::Chart changed but version $new is not higher than $old on ${GITHUB_BASE_REF}"
+            exit 1
+          fi
+
       - name: ct lint
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
