@@ -6,7 +6,7 @@ description: >-
   for backups) to be installed separately, or an external PostgreSQL server.
 type: application
 version: 0.2.0
-appVersion: "4.3.0"
+appVersion: "4.4.0"
 kubeVersion: ">=1.29.0-0"
 home: https://github.com/dcardozoo/teslamate-helm-chart
 icon: https://raw.githubusercontent.com/teslamate-org/teslamate/master/website/static/img/logo.svg
@@ -38,9 +38,9 @@ annotations:
       url: https://cloudnative-pg.io/plugin-barman-cloud/docs/installation/
   artifacthub.io/images: |
     - name: teslamate
-      image: teslamate/teslamate:4.3.0
+      image: teslamate/teslamate:4.4.0
     - name: grafana
-      image: teslamate/grafana:4.3.0
+      image: teslamate/grafana:4.4.0
     - name: mosquitto
       image: eclipse-mosquitto:2.1.2-alpine
     - name: postgresql
