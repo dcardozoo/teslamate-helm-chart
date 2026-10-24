@@ -1,6 +1,6 @@
 # teslamate
 
-![Version: 0.2.0](https://img.shields.io/badge/Version-0.2.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 4.3.0](https://img.shields.io/badge/AppVersion-4.3.0-informational?style=flat-square)
+![Version: 0.2.0](https://img.shields.io/badge/Version-0.2.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 [![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/dcardozoo)](https://artifacthub.io/packages/search?repo=dcardozoo)
 [![Lint and test](https://github.com/dcardozoo/teslamate-helm-chart/actions/workflows/lint-test.yaml/badge.svg)](https://github.com/dcardozoo/teslamate-helm-chart/actions/workflows/lint-test.yaml)
@@ -309,7 +309,7 @@ Kubernetes: `>=1.29.0-0`
 | database.cnpg.backup.serverName | string | `""` | Folder name inside `destinationPath`. Defaults to the Cluster name. Use a new one after a restore: a non-empty WAL archive is refused. |
 | database.cnpg.database | string | `"teslamate"` |  |
 | database.cnpg.extraSpec | object | `{}` | Merged into the generated Cluster `spec` (escape hatch for any CNPG feature). Setting `bootstrap` replaces the default `initdb`, e.g. to restore from a backup. |
-| database.cnpg.imageName | string | `"ghcr.io/cloudnative-pg/postgresql:18.6-standard-trixie"` |  |
+| database.cnpg.imageName | string | Pinned in values.yaml, updated by Renovate. |  |
 | database.cnpg.imagePullPolicy | string | `"IfNotPresent"` |  |
 | database.cnpg.instances | int | `2` | PostgreSQL instances (1 primary + n-1 streaming replicas). Minimum 2. |
 | database.cnpg.keepOnUninstall | bool | `true` | Keep the Cluster (and its data) on `helm uninstall` via `helm.sh/resource-policy: keep`. |
@@ -329,7 +329,7 @@ Kubernetes: `>=1.29.0-0`
 | database.embedded.existingSecret | string | `""` | Existing secret with the owner password (key `password`). Without it a random password is generated and kept across upgrades and uninstalls. |
 | database.embedded.image.pullPolicy | string | `"IfNotPresent"` |  |
 | database.embedded.image.repository | string | `"postgres"` |  |
-| database.embedded.image.tag | string | `"18.6-trixie"` |  |
+| database.embedded.image.tag | string | Pinned in values.yaml, updated by Renovate. |  |
 | database.embedded.nodeSelector | object | `{}` |  |
 | database.embedded.persistence.accessModes[0] | string | `"ReadWriteOnce"` |  |
 | database.embedded.persistence.size | string | `"5Gi"` |  |
@@ -416,7 +416,7 @@ Kubernetes: `>=1.29.0-0`
 | mosquitto.enabled | bool | `true` | Deploy an in-cluster Mosquitto broker for TeslaMate's MQTT output. |
 | mosquitto.image.pullPolicy | string | `"IfNotPresent"` |  |
 | mosquitto.image.repository | string | `"eclipse-mosquitto"` |  |
-| mosquitto.image.tag | string | `"2.1.2-alpine"` |  |
+| mosquitto.image.tag | string | Pinned in values.yaml, updated by Renovate. |  |
 | mosquitto.nodeSelector | object | `{}` |  |
 | mosquitto.persistence.accessModes[0] | string | `"ReadWriteOnce"` |  |
 | mosquitto.persistence.enabled | bool | `false` | Persist retained messages and the subscription database. |
@@ -505,7 +505,7 @@ Kubernetes: `>=1.29.0-0`
 | teslamate.timezone | string | `""` | Time zone, e.g. `Europe/Berlin`. |
 | teslamate.tolerations | list | `[]` |  |
 | teslamate.virtualHost | string | `""` | Public host name (`VIRTUAL_HOST`). Defaults to the first ingress host. |
-| tests | object | `{"curlImage":{"repository":"curlimages/curl","tag":"8.22.0"}}` | Images used by `helm test`. |
+| tests | object | Pinned in values.yaml, updated by Renovate. | Images used by `helm test`. |
 
 ## License
 
