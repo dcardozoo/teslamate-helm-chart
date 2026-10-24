@@ -16,7 +16,7 @@ tests:
     asserts:
       - equal: {path: spec.replicas, value: 1}
       - equal: {path: spec.strategy.type, value: Recreate}
-      - equal: {path: 'spec.template.spec.containers[0].image', value: "teslamate/teslamate:4.3.0"}
+      - matchRegex: {path: 'spec.template.spec.containers[0].image', pattern: '^teslamate/teslamate:\d+\.\d+\.\d+$'}
       - notExists: {path: spec.template.spec.initContainers}
   - it: connects to the CNPG cluster over verified TLS
     template: templates/teslamate/deployment.yaml

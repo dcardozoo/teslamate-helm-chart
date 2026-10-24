@@ -37,6 +37,44 @@
       "depNameTemplate": "teslamate/teslamate",
       "datasourceTemplate": "docker",
       "versioningTemplate": "docker"
+    },
+    {
+      "description": "helm-docs README: AppVersion badge",
+      "customType": "regex",
+      "managerFilePatterns": ["/^README\\.md$/"],
+      "matchStrings": ["AppVersion(?:-|: )(?<currentValue>\\d+\\.\\d+\\.\\d+)"],
+      "depNameTemplate": "teslamate/teslamate",
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    },
+    {
+      "description": "helm-docs README: image defaults that include the repository",
+      "customType": "regex",
+      "managerFilePatterns": ["/^README\\.md$/"],
+      "matchStrings": [
+        "\\| database\\.cnpg\\.imageName \\| string \\| `\"(?<depName>[^:\"]+):(?<currentValue>[^\"]+)\"`",
+        "\"repository\":\"(?<depName>[^\"]+)\",\"tag\":\"(?<currentValue>[^\"]+)\""
+      ],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    },
+    {
+      "description": "helm-docs README: embedded postgres tag",
+      "customType": "regex",
+      "managerFilePatterns": ["/^README\\.md$/"],
+      "matchStrings": ["\\| database\\.embedded\\.image\\.tag \\| string \\| `\"(?<currentValue>[^\"]+)\"`"],
+      "depNameTemplate": "postgres",
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    },
+    {
+      "description": "helm-docs README: mosquitto tag",
+      "customType": "regex",
+      "managerFilePatterns": ["/^README\\.md$/"],
+      "matchStrings": ["\\| mosquitto\\.image\\.tag \\| string \\| `\"(?<currentValue>[^\"]+)\"`"],
+      "depNameTemplate": "eclipse-mosquitto",
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
     }
   ],
   "packageRules": [
