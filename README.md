@@ -505,7 +505,7 @@ Kubernetes: `>=1.29.0-0`
 | teslamate.timezone | string | `""` | Time zone, e.g. `Europe/Berlin`. |
 | teslamate.tolerations | list | `[]` |  |
 | teslamate.virtualHost | string | `""` | Public host name (`VIRTUAL_HOST`). Defaults to the first ingress host. |
-| tests | object | `{"curlImage":{"repository":"curlimages/curl","tag":"8.22.0"}}` | Images used by `helm test`. |
+| tests | object | `{"curlImage":{"repository":"curlimages/curl","tag":"8.23.0"}}` | Images used by `helm test`. |
 
 ## License
 

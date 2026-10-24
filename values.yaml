@@ -358,4 +358,4 @@ database:
 tests:
   curlImage:
     repository: curlimages/curl
-    tag: 8.22.0
+    tag: 8.23.0
